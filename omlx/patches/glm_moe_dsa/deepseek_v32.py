@@ -259,6 +259,29 @@ class Indexer(nn.Module):
             return finish_topk_indices(indices, prefix_rows)
 
         if s == 1:
+            # Fused decode scan: one kernel computes the head-summed scores in a
+            # single pass over K (fp32 accumulate, fp32 scores) instead of the
+            # q@k^T -> relu -> *w -> sum chain that materializes four S-sized
+            # tensors per layer per token. Selection via argpartition on the
+            # fp32 scores matches fp32 ground truth exactly (the native 16-bit
+            # radix top-k is not applicable to fp32 scores).
+            if (
+                mask is None
+                and glm_fast.has("dsa_decode_scores")
+                and self.n_heads == 32
+                and self.head_dim == 128
+                and q.dtype in (mx.float16, mx.bfloat16)
+                and k.dtype == q.dtype
+                and k.shape[2] >= 4096
+            ):
+                w_dec = (weights_lh * self.weight_scale).astype(q.dtype)
+                scores = glm_fast.dsa_decode_scores(
+                    q, k, w_dec.reshape(b, self.n_heads)
+                )
+                indices = mx.argpartition(scores, kth=-self.index_topk, axis=-1)[
+                    ..., -self.index_topk :
+                ]
+                return finish_topk_indices(indices)
             scores = q @ k.swapaxes(-1, -2)
             scores = mx.maximum(scores, 0)
             weights = weights_lh * self.weight_scale
