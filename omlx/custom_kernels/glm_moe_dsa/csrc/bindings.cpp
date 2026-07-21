@@ -52,6 +52,7 @@ NB_MODULE(_ext, m) {
       "queries"_a,
       "keys"_a,
       "weights"_a,
+      "fp32_scores"_a = false,
       "stream"_a = nb::none());
 
   m.def(

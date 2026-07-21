@@ -143,6 +143,7 @@ def dsa_decode_scores(
     queries: mx.array,
     keys: mx.array,
     weights: mx.array,
+    fp32_scores: bool = False,
     *,
     stream=None,
 ) -> mx.array:
@@ -154,6 +155,7 @@ def dsa_decode_scores(
         queries,
         keys,
         weights,
+        fp32_scores=fp32_scores,
         **_native_stream_kwargs(stream),
     )
 

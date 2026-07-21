@@ -34,6 +34,7 @@ mx::array dsa_decode_scores(
     const mx::array& queries,
     const mx::array& keys,
     const mx::array& weights,
+    bool fp32_scores = false,
     mx::StreamOrDevice s = {});
 
 } // namespace omlx::glm_kernels
